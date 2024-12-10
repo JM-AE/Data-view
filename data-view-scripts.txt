@@ -1,14 +1,12 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 
 class DataDashboard:
     def __init__(self, root):
         self.root = root
         self.root.title("Data Handling Dashboard")
         self.data = None
+        self.plot_frame = None  # Frame to embed the plot
 
         # Create main frames
         self.create_buttons()
@@ -59,21 +57,13 @@ class DataDashboard:
             elif option == "Histogram":
                 column = tk.simpledialog.askstring("Column", "Enter column name for histogram:")
                 if column in self.data.columns:
-                    plt.figure(figsize=(8, 6))
-                    sns.histplot(self.data[column], kde=True)
-                    plt.title(f"Histogram of {column}")
-                    plt.show()
+                    self.display_plot(self.create_histogram(column))
             elif option == "Correlation Matrix":
-                plt.figure(figsize=(8, 6))
-                sns.heatmap(self.data.corr(), annot=True, cmap="coolwarm")
-                plt.title("Correlation Matrix")
-                plt.show()
+                self.display_plot(self.create_correlation_matrix())
             elif option == "Pie Chart":
                 column = tk.simpledialog.askstring("Column", "Enter column name for pie chart:")
                 if column in self.data.columns:
-                    self.data[column].value_counts().plot.pie(autopct='%1.1f%%', figsize=(8, 6))
-                    plt.title(f"Pie Chart of {column}")
-                    plt.show()
+                    self.display_plot(self.create_pie_chart(column))
         else:
             messagebox.showwarning("No Data", "Please load data first.")
 
@@ -91,7 +81,37 @@ class DataDashboard:
         else:
             messagebox.showwarning("No Data", "Please load data first.")
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = DataDashboard(root)
-    root.mainloop()
+    def create_histogram(self, column):
+        fig = Figure(figsize=(6, 4))
+        ax = fig.add_subplot(111)
+        ax.hist(self.data[column], bins=20, color='blue', edgecolor='black')
+        ax.set_title(f"Histogram of {column}")
+        ax.set_xlabel(column)
+        ax.set_ylabel("Frequency")
+        return fig
+
+    def create_correlation_matrix(self):
+        fig = Figure(figsize=(6, 4))
+        ax = fig.add_subplot(111)
+        sns.heatmap(self.data.corr(), annot=True, cmap="coolwarm", ax=ax)
+        ax.set_title("Correlation Matrix")
+        return fig
+
+    def create_pie_chart(self, column):
+        fig = Figure(figsize=(6, 4))
+        ax = fig.add_subplot(111)
+        self.data[column].value_counts().plot.pie(autopct='%1.1f%%', ax=ax)
+        ax.set_title(f"Pie Chart of {column}")
+        ax.set_ylabel("")  # Remove default ylabel
+        return fig
+
+    def display_plot(self, fig):
+        if self.plot_frame:
+            self.plot_frame.destroy()  # Clear previous plot
+
+        self.plot_frame = tk.Frame(self.root)
+        self.plot_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
