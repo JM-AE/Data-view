@@ -1,0 +1,208 @@
+url_adsb = "https://raw.githubusercontent.com/JM-AE/Airport-Flight-Data/refs/heads/main/adsb.json"
+url_oag = "https://raw.githubusercontent.com/JM-AE/Airport-Flight-Data/refs/heads/main/oag.json"
+url_adsb_multi = "https://raw.githubusercontent.com/JM-AE/Airport-Flight-Data/refs/heads/main/adsb_multi_aircraft.json"
+url_oag_multi = "https://raw.githubusercontent.com/JM-AE/Airport-Flight-Data/refs/heads/main/oag_multiple.json"
+
+
+
+
+
+# Importing Spark libraries
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, min, max, avg, count
+
+# Importing Python Data Stat. libraries
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# For error handling and utilities 
+import json
+import requests
+import urllib.request
+import sys
+import os
+
+# Spark builder (check warnings - port 4041)
+spark = SparkSession.builder.appName("AirportFlightDataViz").getOrCreate()
+
+url_adsb = "https://raw.githubusercontent.com/JM-AE/Airport-Flight-Data/refs/heads/main/adsb.json"
+response_adsb = requests.get(url_adsb)
+
+# Check if file is possible to load using py.json
+if response_adsb.status_code == 200:
+    data_adsb = response_adsb.json()
+    print("adsb.json data successfully loaded")
+else: print(f"Failed to load adsb.json Status code:{response_adsb.status_code}")
+
+# Print sample of .json file
+for entry_adsb in data_adsb[:2]:
+    print("data_adsb",entry_adsb)
+
+# Request save as tmp file 
+urllib.request.urlretrieve(url_adsb,"/tmp/file_absd.json")
+
+# Check if file exist on correct address
+if os.path.exists("/tmp/file_absd.json"):
+    print("tmp file_absd.json exist")
+else: 
+    print("tmp file_absd.json do not exist")
+
+# Check if .joson valid or not
+with open("/tmp/file_absd.json","r") as f:
+    try:
+       data_adsb = json.lo 
+
+# Load in to Spark DF with check for error     
+try:
+    df_absd =spark.read.json("/tmp/file_absd.json")
+    df_absd.show(3)
+except Exception as e:
+    print(f"Error loading DataFrame:{str(e)}")
+
+df_absd.printSchema()
+
+
+
+
+
+
+response_oag = requests.get(url_oag_multi)
+
+# Check if file is possible to load using py.json
+if response_oag.status_code == 200:
+    data_oag = response_oag.json()
+    print("oag.json data successfully loaded")
+else: print(f"Failed to load oag.json Status code:{response_oag.status_code}")
+
+# Request save as tmp file 
+urllib.request.urlretrieve(url_oag,"/tmp/file_oag.json")
+
+# Check if file exist on correct address
+if os.path.exists("/tmp/file_oag.json"):
+    print("tmp file_oag.json exist")
+else: 
+    print("tmp file_oag.json do not exist")
+
+# Check if .joson valid or not
+with open("/tmp/file_oag.json","r") as f:
+    try:
+       data_adsb = json.load(f)
+       print("oag.json is valid")
+    except json.JSONDecodeError as e:
+        print(f"Invalid oag.json structure: {e}") 
+
+
+# Load in to Spark DF with check for error     
+try:
+    df_absd =spark.read.json("/tmp/file_oag.json")
+    df_absd.show(3)
+except Exception as t:
+    print(f"Error loading DataFrame in single line option")
+    print(str(t))
+    print(f"Attempt to load DataFrame in multi line option")
+    try: 
+        df_absd =spark.read.option("multiline", "true").json("/tmp/file_oag.json")
+        print(f"Dataframe Loaded succesfully")
+    except Exception as w:
+        print(f"Error loading DataFrame in multi line option:{str(w)}")
+
+df_absd.show(1)
+
+
+# Request save as tmp file 
+urllib.request.urlretrieve(url_oag,"/tmp/file_oag.json")
+
+# Check if file exist on correct address
+if os.path.exists("/tmp/file_oag.json"):
+    print("tmp file_oag.json exist")
+else: 
+    print("tmp file_oag.json do not exist")
+
+test_df_oag = spark.read.option("multiline","true").json("/tmp/file_oag.json")
+root_type = test_df_oag.schema.fields[0].dataType
+
+if isinstance(root_type, ArrayType):
+    print("JSON contains list of directories (multiple records)")
+    test_df_oag.show(truncate=False)
+
+elif isinstance(root_type, StructType):
+    print("JSON contains single dictionary (single record")
+    test_df_oag.show(truncate=False)
+else:
+    print("Unknown structure")
+
+
+
+def load_data_test(url):
+    # 0 Extract the file name from the URL
+    parsed_url = urlparse(url)
+    file_name = os.path.basename(parsed_url.path)
+
+    # 1 Load data from URL
+    response = requests.get(url)
+    if response.status_code != 200:
+        print(f"#1# Failed to load {file_name}. Status code: {response.status_code} #1#")
+        return None  
+    
+    data = response.json()
+    print(f"#1# {file_name} data successfully loaded #1#")
+
+    # 2 Determine the structure of the data and find keys
+    if isinstance(data, dict):
+        keys = list(data.keys())
+        print(f"#2# Top-level keys found: {keys} #2#")
+        
+        # Find the first list-type key
+        for key in keys:
+            if isinstance(data[key], list):
+                for entry in data[key][:1]:  # Sample the first entry
+                    print(f"#2# Raw Data from key: '{key}': {json.dumps(entry, indent=4)} #2#")
+                break
+        else:
+            print("#2# No list-type keys found in the dictionary. #2#")
+    
+    elif isinstance(data, list):
+        for entry in data[:1]:  # Sample the first entry
+            print(f"#2# Raw Data: {json.dumps(entry, indent=4)} #2#")
+    
+    else:
+        print("#2# No valid data found. #2#")
+        return None
+
+    # 3 Create a temporary file with a name based on the URL 
+    tmp_file_path = os.path.join(tempfile.gettempdir(), file_name)
+    urllib.request.urlretrieve(url, tmp_file_path)
+
+    # 4 Check temporary file
+    if not os.path.exists(tmp_file_path):
+        print(f"#4# Temporary file {file_name} does not exist #4#")
+        return None
+    print(f"#4# Temporary file {file_name} exists #4#")
+
+    # 5 Validate the JSON structure
+    try:
+        with open(tmp_file_path, "r") as f:
+            json.load(f)  # Only load to validate
+        print(f"#5# {file_name} is valid #5#")
+    except json.JSONDecodeError as e:
+        print(f"#5# Invalid {file_name} structure: {str(e)} #5#")
+        return None
+
+    # 6 Load into Spark DataFrame with error handling
+    try:
+        df = spark.read.json(tmp_file_path)
+        print("#6# DataFrame loaded successfully. #6#")
+    except Exception as e:
+        print("#6# Error loading DataFrame in single line option: #6#")
+        print(f"#6# {str(e)} #6#")
+        try:
+            df = spark.read.option("multiline", "true").json(tmp_file_path)
+            print("#6# DataFrame loaded successfully in multiline option #6#")
+        except Exception as e:
+            print("#6# Error loading DataFrame in multiline option: #6#")
+            print(f"#6# {str(e)} #6#")
+            return None
+
+    # 7 Show the DataFrame
+    df.show(1)
+    return df
