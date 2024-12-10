@@ -1,21 +1,9 @@
-from tkinter import ttk
-from bokeh.plotting import figure, show
-from bokeh.io import output_notebook
-from bokeh.models import ColumnDataSource
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
-import seaborn as sns
-import pandas as pd
-import tkinter as tk
-from tkinter import filedialog, messagebox
-
 class DataDashboard:
     def __init__(self, root):
         self.root = root
         self.root.title("Data Handling Dashboard")
         self.data = None
-        self.plot_frame = None  # Frame to embed the plot
+        self.plot_frame = None
         self.selected_column = tk.StringVar(self.root)
         self.selected_graph = tk.StringVar(self.root)
         self.graph_libraries = ["Matplotlib", "Seaborn", "Bokeh"]
@@ -59,6 +47,15 @@ class DataDashboard:
         self.error_label = tk.Label(self.root, textvariable=self.error_message, fg="red", anchor="w")
         self.error_label.pack(side=tk.BOTTOM, fill=tk.X)
 
+    def reset_error_message(self):
+        """Clears the error message."""
+        self.error_message.set("")
+
+    def clear_plot_area(self):
+        """Clears the plot frame."""
+        for widget in self.plot_frame.winfo_children():
+            widget.destroy()
+
     def load_data(self):
         file_path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), ("Excel Files", "*.xlsx")])
         if file_path:
@@ -67,6 +64,7 @@ class DataDashboard:
                     self.data = pd.read_csv(file_path)
                 elif file_path.endswith(".xlsx"):
                     self.data = pd.read_excel(file_path)
+                self.reset_error_message()
                 self.error_message.set("Data loaded successfully.")
                 self.update_column_dropdown()
                 self.display_dataframe()
@@ -75,12 +73,14 @@ class DataDashboard:
 
     def describe_data(self):
         if self.data is not None:
+            self.reset_error_message()
             desc = self.data.describe()
             self.display_dataframe(desc)
         else:
             self.error_message.set("Please load data first.")
 
     def update_column_dropdown(self):
+        """Updates the column dropdown with current DataFrame columns."""
         if self.data is not None:
             menu = self.column_dropdown["menu"]
             menu.delete(0, "end")
@@ -111,12 +111,18 @@ class DataDashboard:
             self.error_message.set("Please select a valid column.")
             return
 
-        if selected_graph == "Histogram":
-            self.plot_histogram(column)
-        elif selected_graph == "Pie Chart":
-            self.plot_pie_chart(column)
-        elif selected_graph == "Correlation Matrix":
-            self.plot_correlation_matrix()
+        self.reset_error_message()
+        self.clear_plot_area()
+
+        try:
+            if selected_graph == "Histogram":
+                self.plot_histogram(column)
+            elif selected_graph == "Pie Chart":
+                self.plot_pie_chart(column)
+            elif selected_graph == "Correlation Matrix":
+                self.plot_correlation_matrix()
+        except Exception as e:
+            self.error_message.set(f"Error generating plot: {str(e)}")
 
     def plot_histogram(self, column):
         fig = Figure(figsize=(6, 4))
@@ -144,10 +150,6 @@ class DataDashboard:
 
     def display_plot(self, fig):
         """Displays a Matplotlib figure in the Tkinter window."""
-        if self.plot_frame:
-            for widget in self.plot_frame.winfo_children():
-                widget.destroy()
-
         canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -161,15 +163,17 @@ class DataDashboard:
         try:
             if option == "dropna":
                 self.data.dropna(inplace=True)
-                self.display_dataframe()
+                self.reset_error_message()
                 self.error_message.set("Missing values dropped.")
             elif option == "fillna":
                 fill_value = tk.simpledialog.askstring("Fill Value", "Enter value to fill missing data:")
                 self.data.fillna(fill_value, inplace=True)
-                self.display_dataframe()
+                self.reset_error_message()
                 self.error_message.set("Missing values filled.")
             else:
                 self.error_message.set("Invalid manipulation option.")
+            self.update_column_dropdown()
+            self.display_dataframe()
         except Exception as e:
             self.error_message.set(f"Error during manipulation: {str(e)}")
 
