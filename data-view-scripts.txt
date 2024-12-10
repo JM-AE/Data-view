@@ -1,5 +1,4 @@
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
+from tkinter import ttk
 
 class DataDashboard:
     def __init__(self, root):
@@ -7,6 +6,12 @@ class DataDashboard:
         self.root.title("Data Handling Dashboard")
         self.data = None
         self.plot_frame = None  # Frame to embed the plot
+        self.visualization_options = {  # Available visualization functions
+            "Table": self.display_table,
+            "Histogram": self.create_histogram,
+            "Correlation Matrix": self.create_correlation_matrix,
+            "Pie Chart": self.create_pie_chart
+        }
 
         # Create main frames
         self.create_buttons()
@@ -18,7 +23,15 @@ class DataDashboard:
 
         tk.Button(button_frame, text="Load Data", command=self.load_data).pack(side=tk.LEFT, padx=5, pady=5)
         tk.Button(button_frame, text="Describe Data", command=self.describe_data).pack(side=tk.LEFT, padx=5, pady=5)
-        tk.Button(button_frame, text="Visualize Data", command=self.visualize_data).pack(side=tk.LEFT, padx=5, pady=5)
+
+        # Visualization Dropdown
+        self.selected_option = tk.StringVar(self.root)
+        self.selected_option.set("Select Visualization")
+        dropdown = ttk.OptionMenu(
+            button_frame, self.selected_option, *self.visualization_options.keys(), command=self.visualize_data
+        )
+        dropdown.pack(side=tk.LEFT, padx=5, pady=5)
+
         tk.Button(button_frame, text="Manipulate Data", command=self.manipulate_data).pack(side=tk.LEFT, padx=5, pady=5)
 
     def create_display_area(self):
@@ -46,24 +59,18 @@ class DataDashboard:
         else:
             messagebox.showwarning("No Data", "Please load data first.")
 
-    def visualize_data(self):
+    def visualize_data(self, selected_option):
         if self.data is not None:
-            options = ["Table", "Histogram", "Correlation Matrix", "Pie Chart"]
-            option = tk.simpledialog.askstring("Visualization Options", f"Choose one: {', '.join(options)}")
-            
-            if option == "Table":
-                self.text_area.delete(1.0, tk.END)
-                self.text_area.insert(tk.END, f"Data Table:\n{self.data.head()}\n")
-            elif option == "Histogram":
-                column = tk.simpledialog.askstring("Column", "Enter column name for histogram:")
-                if column in self.data.columns:
-                    self.display_plot(self.create_histogram(column))
-            elif option == "Correlation Matrix":
-                self.display_plot(self.create_correlation_matrix())
-            elif option == "Pie Chart":
-                column = tk.simpledialog.askstring("Column", "Enter column name for pie chart:")
-                if column in self.data.columns:
-                    self.display_plot(self.create_pie_chart(column))
+            plot_function = self.visualization_options.get(selected_option)
+            if plot_function:
+                if selected_option in ["Histogram", "Pie Chart"]:
+                    column = tk.simpledialog.askstring("Column", "Enter column name:")
+                    if column in self.data.columns:
+                        self.display_plot(plot_function(column))
+                    else:
+                        messagebox.showerror("Error", f"Column '{column}' not found in data.")
+                else:
+                    self.display_plot(plot_function())
         else:
             messagebox.showwarning("No Data", "Please load data first.")
 
@@ -80,6 +87,11 @@ class DataDashboard:
                 messagebox.showinfo("Manipulation", "Missing values filled.")
         else:
             messagebox.showwarning("No Data", "Please load data first.")
+
+    def display_table(self):
+        self.text_area.delete(1.0, tk.END)
+        self.text_area.insert(tk.END, f"Data Table:\n{self.data.head()}\n")
+        return None  # No plot to display
 
     def create_histogram(self, column):
         fig = Figure(figsize=(6, 4))
@@ -112,6 +124,7 @@ class DataDashboard:
         self.plot_frame = tk.Frame(self.root)
         self.plot_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
-        canvas.draw()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        if fig:  # Only embed plot if a figure is provided
+            canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
+            canvas.draw()
+            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
