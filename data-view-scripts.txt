@@ -20,14 +20,16 @@ class DataDashboard:
         tk.Button(button_frame, text="Load Data", command=self.load_data).pack(side=tk.LEFT, padx=5, pady=5)
         tk.Button(button_frame, text="Describe Data", command=self.describe_data).pack(side=tk.LEFT, padx=5, pady=5)
 
-        # Graph dropdowns
+        # Dropdowns and buttons
         self.column_dropdown = ttk.OptionMenu(button_frame, self.selected_column, "Select Column")
         self.column_dropdown.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.graph_dropdown = ttk.OptionMenu(button_frame, self.selected_graph, "Select Graph", *self.visualization_methods, command=self.visualize_data)
+        self.graph_dropdown = ttk.OptionMenu(button_frame, self.selected_graph, "Select Graph", *self.visualization_methods)
         self.graph_dropdown.pack(side=tk.LEFT, padx=5, pady=5)
 
-        # Data manipulation button
+        tk.Button(button_frame, text="OK", command=self.confirm_selection).pack(side=tk.LEFT, padx=5, pady=5)
+        tk.Button(button_frame, text="Reset", command=self.reset_screen).pack(side=tk.LEFT, padx=5, pady=5)
+
         tk.Button(button_frame, text="Manipulate Data", command=self.manipulate_data).pack(side=tk.LEFT, padx=5, pady=5)
 
         # Data display area
@@ -101,7 +103,8 @@ class DataDashboard:
         for _, row in df.iterrows():
             self.data_frame.insert("", "end", values=list(row))
 
-    def visualize_data(self, selected_graph):
+    def confirm_selection(self):
+        """Executes the selected column and graph choice to display the plot."""
         if self.data is None:
             self.error_message.set("Please load data first.")
             return
@@ -111,15 +114,20 @@ class DataDashboard:
             self.error_message.set("Please select a valid column.")
             return
 
+        graph = self.selected_graph.get()
+        if graph not in self.visualization_methods:
+            self.error_message.set("Please select a valid graph type.")
+            return
+
         self.reset_error_message()
         self.clear_plot_area()
 
         try:
-            if selected_graph == "Histogram":
+            if graph == "Histogram":
                 self.plot_histogram(column)
-            elif selected_graph == "Pie Chart":
+            elif graph == "Pie Chart":
                 self.plot_pie_chart(column)
-            elif selected_graph == "Correlation Matrix":
+            elif graph == "Correlation Matrix":
                 self.plot_correlation_matrix()
         except Exception as e:
             self.error_message.set(f"Error generating plot: {str(e)}")
@@ -153,6 +161,13 @@ class DataDashboard:
         canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+    def reset_screen(self):
+        """Resets the screen by clearing plots, error messages, and the DataFrame."""
+        self.clear_plot_area()
+        self.reset_error_message()
+        self.data_frame.delete(*self.data_frame.get_children())
+        self.error_message.set("Screen reset.")
 
     def manipulate_data(self):
         if self.data is None:
