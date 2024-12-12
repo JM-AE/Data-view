@@ -41,12 +41,12 @@ Before running the application, ensure you have the following Python libraries i
 - numpy
 - matplotlib
 - seaborn
-- scipy
+
 
 You can install these libraries using pip:
 
 ```bash
-pip install pandas numpy matplotlib seaborn scipy
+pip install pandas numpy matplotlib seaborn 
 ```
 
 ## Installation
