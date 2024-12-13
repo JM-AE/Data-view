@@ -41,6 +41,7 @@ Before running the application, ensure you have the following Python libraries i
 - numpy
 - matplotlib
 - seaborn
+- scipy
 
 
 You can install these libraries using pip:
