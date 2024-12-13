@@ -47,7 +47,7 @@ Before running the application, ensure you have the following Python libraries i
 You can install these libraries using pip:
 
 ```bash
-pip install pandas numpy matplotlib seaborn 
+pip install pandas numpy matplotlib seaborn scipy
 ```
 
 ## Installation
